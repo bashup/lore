@@ -6,6 +6,6 @@ dk use: modd-watch        # watch multiple patterns and run different commands o
 dk use: shellcheck        # support running shellcheck (via docker if not installed)
 
 before build dk test
-on     build mdsh --out bin/lore --compile "$LOCO_ROOT/lore.md"
-
+on     build mdsh --out bin/lore                   --compile "$LOCO_ROOT/lore.md"
+before test  mdsh --out "$BASHER_INSTALL_BIN"/lore --compile "$LOCO_ROOT/lore.md"
 watch+ "*.md" "specs/*" "!**/*.md.err" "!**/.~*.md" -- dk test
