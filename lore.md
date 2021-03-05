@@ -31,20 +31,48 @@ export -f lore
 
 ```shell
 lore.status() {
-	local is_on=ON; [[ ${PROMPT_COMMAND-} == *'lore prompt;'* ]] || is_on=off;
-	printf "lore is %s, in '%s' mode; HISTFILE=%q\\n" "$is_on" "${LORE_MODE-auto}" "${HISTFILE-}"
+	local REPLY is_on=ON; lore::enabled || is_on=off;
+	lore::format-histfile
+	printf "lore is %s, in '%s' mode; HISTFILE=%s\\n" "$is_on" "${LORE_MODE-auto}" "${REPLY}" >&2
+	lore -- "$@"
+}
+
+lore::enabled() { [[ ${PROMPT_COMMAND-} == *'lore prompt;'* ]]; }
+
+lore::format-histfile() { #set -x
+	REPLY=${HISTFILE-}; REPLY=${REPLY/#$PWD\//}
+	[[ ! ${HOME-} ]] || REPLY=${REPLY/#$HOME\//'~'/}
+	REPLY="${REPLY:-''}"
 }
 ```
 
-#### lore help
+#### lore help (TODO)
 
 ### History File Selection
 
 #### lore local
 
+`lore local` selects (and loads) the local history file, and switches the `LORE_MODE` to `auto`.  (Any pending history writes are flushed first.)
+
+```shell
+lore.local() { history -a; lore::find-local; lore::select "$REPLY"; lore unlock "$@"; }
+```
+
 #### lore global
 
+`lore global` is equivalent to `lore use` *global-history-file*: i.e., it selects and loads the global history, switching the `LORE_MODE` to `locked`.  (Any pending history writes are flushed first.)
+
+```shell
+lore.global() { lore::find-global; lore use "$REPLY" "$@"; }
+```
+
 #### lore use
+
+`lore use` *file-or-dir* selects (and loads) the specified history file, and switches the `LORE_MODE` to `locked` so it won't be immediately switched away from.  (Any pending history writes are flushed first.)
+
+```shell
+lore.use() { history -a; lore::select "${1-$PWD}"; lore lock "${@:2}"; }
+```
 
 ### Live History Saving and File-Swapping
 
@@ -64,17 +92,32 @@ lore.on() {	lore off; declare -gx PROMPT_COMMAND="{ lore prompt;};${PROMPT_COMMA
 
 ```shell
 lore.off() {
-	[[ ! ${PROMPT_COMMAND-} ]] || declare -gx PROMPT_COMMAND=${PROMPT_COMMAND//\{ lore prompt;\};/}
+	! lore::enabled || declare -gx PROMPT_COMMAND=${PROMPT_COMMAND//\{ lore prompt;\};/}
 }
 ```
 
 #### lore lock
 
-`lore lock` sets `LORE_MODE` to `fixed`, disabling auto-switching of the current history file.
+`lore lock` sets `LORE_MODE` to `locked`, disabling auto-switching of the current history file.
+
+```shell
+lore.lock() { lore::set-mode locked "disabling autoselect; use 'lore unlock' to re-enable" "$@"; }
+
+lore::set-mode() {
+	if [[ ${LORE_MODE-auto} != "$1" ]]; then
+		declare -gx LORE_MODE="$1"; ! lore::enabled || echo "lore: $2" >&2
+	fi
+	lore -- "${@:3}"
+}
+```
 
 #### lore unlock
 
 `lore unlock` sets `LORE_MODE` to `auto`, enabling auto-switching of the current history file (if lore is currently enabled via `lore on`).
+
+```shell
+lore.unlock() { lore::set-mode auto "re-entering autoselect mode" "$@"; }
+```
 
 #### lore prompt
 
@@ -86,14 +129,17 @@ lore.off() {
 declare -g __lore_pwd=
 
 lore.prompt() {
-	# Record current history and select local history file if needed
 	if [[ ${LORE_MODE-auto} == auto && $PWD != "$__lore_pwd" ]]; then
-		if lore::find-local; [[ $REPLY != "${HISTFILE-}" ]]; then
-			# Switch files, but don't save the command that did the switching
-			lore::select "$REPLY"
-			return
-		fi
+		# Current directory changed; check for new history file
+		[[ $__lore_pwd ]] || history -a
 		declare -g __lore_pwd=$PWD
+		if lore::find-local; [[ $REPLY != "${HISTFILE-}" ]]; then
+			set -- "$REPLY"	# Save the new history file's name
+			if lore::find-global; [[ $REPLY == "${HISTFILE-}" ]]; then
+				history -a   # Only save directory-changing commands to global history
+			fi			
+			lore::select "$1"	# Load the new history file
+		fi
 	fi
 	history -a   # save last command(s)
 }
@@ -111,16 +157,20 @@ lore.prompt() {
 
 #### lore::select
 
+`lore::select` *file-or-dir* updates `HISTFILE` to match *file-or-dir*.  If the result changes `HISTFILE`, the current history is cleared and then reloaded from the new file, with a message printed to stderr about it.  (Note that in most cases this means you should `history -a` before calling this function, to ensure no history is lost.)
+
 ```shell
 lore::select() {
 	lore::abspath "$1"; lore::to-file "$REPLY"
 	if [[ $REPLY != "${HISTFILE-}" ]]; then
 		# Clear current history and load the new one
-		history -c; declare -g HISTFILE=$REPLY; history -r
+		history -c
+		declare -g HISTFILE=$REPLY; lore::format-histfile
+		echo "lore: loading history from $REPLY" >&2
+		history -r
 	fi
 }
 ```
-
 
 #### lore::find-global
 
@@ -188,7 +238,7 @@ lore::abspath() {
 lore::to-file() { REPLY=$1; [[ ! -d $REPLY ]] || REPLY=${REPLY%/}/${LORE_FILE-.lore}; }
 ```
 
-## Bootstrapping
+### Bootstrapping
 
 Now that all the commands and other functions have been defined, we can define another function to indicate that lore is fully loaded:
 

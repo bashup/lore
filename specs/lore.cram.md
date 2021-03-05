@@ -1,6 +1,4 @@
-## CLI Tests
-
-### Setup and Mocks
+## Setup and Mocks
 
 For testing purposes, we will replace the history built-in with a function so we can see what history commands lore invokes:
 
@@ -20,6 +18,7 @@ And clean the environment of any variables lore uses for configuration, so that 
 
 ~~~sh
     $ unset ${!LORE_@} TMUX_PANE HOME XDG_CONFIG_HOME
+    $ export HOME=$PWD
 ~~~
 
 We'll also `set -u` so we can make sure lore is compatible with that operating mode.
@@ -27,6 +26,8 @@ We'll also `set -u` so we can make sure lore is compatible with that operating m
 ~~~sh
     $ set -u
 ~~~
+
+## CLI Tests
 
 ### Startup
 
@@ -109,22 +110,60 @@ Turning lore off removes the `lore prompt`:
     $ unset PROMPT_COMMAND
 ~~~
 
+#### lore lock/unlock
+
+`lore lock` sets `LORE_MODE` to `locked`, disabling auto-switching of the current history file.
+
+`lore unlock` sets `LORE_MODE` to `auto`, enabling auto-switching of the current history file (if lore is currently enabled via `lore on`).
+
+~~~sh
+    $ lore status
+    lore is off, in 'auto' mode; HISTFILE=''
+
+# Basic lock/unlock
+    $ lore lock; lore status
+    lore is off, in 'locked' mode; HISTFILE=''
+
+    $ lore unlock; lore status
+    lore is off, in 'auto' mode; HISTFILE=''
+
+# With messages (in 'lore on' mode)
+    $ lore on
+
+    $ lore lock; lore status
+    lore: disabling autoselect; use 'lore unlock' to re-enable
+    lore is ON, in 'locked' mode; HISTFILE=''
+
+    $ lore lock  # no-op if already locked
+
+    $ lore unlock; lore status
+    lore: re-entering autoselect mode
+    lore is ON, in 'auto' mode; HISTFILE=''
+
+    $ lore unlock  # no-op if already unlocked
+    $ lore off
+~~~
+
 #### lore prompt
 
 `lore prompt` is run at each command prompt (assuming lore is `on`).  If `LORE_MODE` is `auto` (or empty), and the current directory has changed, it will search for the correct `.lore` file (or global history) and switch to it.  If the history file hasn't changed, the most recent command history is appended to it.
 
 ~~~sh
-# Initial run: no "last directory, so load from .lore
+# Initial run: no "last directory", so load from .lore
     $ touch .lore
-    $ lore prompt
+    $ lore prompt   # will save first, since no last dir
+    HISTFILE= history -a
     HISTFILE= history -c
+    lore: loading history from .lore
     HISTFILE=./.lore history -r
+    HISTFILE=./.lore history -a
 
 # Subsequent run: last directory is PWD, so just save most recent command(s)
     $ lore prompt
     HISTFILE=./.lore history -a
 
 # Subdirectory: no change in .lore path, so just append again:
+    $ LORE_GLOBAL=$PWD/.lore
     $ mkdir x
     $ cd x
     $ lore prompt
@@ -133,11 +172,87 @@ Turning lore off removes the `lore prompt`:
 # Subdirectory w/change in .lore path
     $ mkdir y; touch .lore
     $ cd y
+    $ lore prompt  # cd will be saved because it's the global dir
+    HISTFILE=./.lore history -a
+    HISTFILE=./.lore history -c
+    lore: loading history from ~/x/.lore
+    HISTFILE=./x/.lore history -r
+    HISTFILE=./x/.lore history -a
+
+# Subdir change again, but locked this time
+    $ cd ../..
+    $ lore lock
+    $ lore prompt
+    HISTFILE=./x/.lore history -a
+
+# Now unlock
+    $ lore unlock
+    $ lore prompt
+    HISTFILE=./x/.lore history -c
+    lore: loading history from .lore
+    HISTFILE=./.lore history -r
+    HISTFILE=./.lore history -a
+
+# And change dirs, but without a global match
+    $ unset LORE_GLOBAL
+    $ cd x/y
     $ lore prompt
     HISTFILE=./.lore history -c
+    lore: loading history from ~/x/.lore
+    HISTFILE=./x/.lore history -r
+    HISTFILE=./x/.lore history -a
+~~~
+
+#### lore use
+
+`lore use` *file-or-dir* selects (and loads) the specified history file, and switches the `LORE_MODE` to `locked` so it won't be immediately switched away from.  (Any pending history writes are flushed first.)
+
+~~~sh
+    $ lore use .
+    HISTFILE=./x/.lore history -a
+    HISTFILE=./x/.lore history -c
+    lore: loading history from .lore
+    HISTFILE=./x/y/.lore history -r
+
+    $ lore status
+    lore is off, in 'locked' mode; HISTFILE=.lore
+
+    $ lore unlock
+~~~
+
+#### lore global
+
+`lore global` is equivalent to `lore use` *global-history-file*: i.e., it selects and loads the global history, switching the `LORE_MODE` to `locked`.  (Any pending history writes are flushed first.)
+
+~~~sh
+    $ lore global
+    HISTFILE=./x/y/.lore history -a
+    HISTFILE=./x/y/.lore history -c
+    lore: loading history from ~/.bash_history
+    HISTFILE=./.bash_history history -r
+
+    $ lore status
+    lore is off, in 'locked' mode; HISTFILE=~/.bash_history
+~~~
+
+#### lore local
+
+`lore local` selects (and loads) the local history file, and switches the `LORE_MODE` to `auto`.  (Any pending history writes are flushed first.)
+
+~~~sh
+    $ lore local
+    HISTFILE=./.bash_history history -a
+    HISTFILE=./.bash_history history -c
+    lore: loading history from ~/x/.lore
     HISTFILE=./x/.lore history -r
 
-# Clean up
+    $ lore status
+    lore is off, in 'auto' mode; HISTFILE=~/x/.lore
+~~~
+
+#### Cleanup
+
+~~~sh
     $ cd ../..
     $ rm x/.lore
     $ rmdir x/y x
@@ -145,7 +260,7 @@ Turning lore off removes the `lore prompt`:
 
 
 
-## Unit Tests
+## Internal Tests
 
 ### Path Manipulation
 
