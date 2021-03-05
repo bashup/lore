@@ -4,24 +4,15 @@ For testing purposes, we will replace the history built-in with a function so we
 
 ~~~sh
     $ history() {
-    >     local REPLY HISTFILE=${HISTFILE-}
-    >     printf -v REPLY " %q" "HISTFILE=${HISTFILE/#$TEST_BASE/.}" "history" "$@"
-    >     echo "${REPLY# }"
+    >     local HISTFILE=${HISTFILE-}
+    >     dumpargs "HISTFILE=${HISTFILE/#$TEST_ROOT//TEST}" "history" "$@"
     > }
-    $ export TEST_BASE=$PWD
 
     $ history -a
     HISTFILE= history -a
 ~~~
 
-And clean the environment of any variables lore uses for configuration, so that anything set outside the test environment doesn't affect us here:
-
-~~~sh
-    $ unset ${!LORE_@} TMUX_PANE HOME XDG_CONFIG_HOME
-    $ export HOME=$PWD
-~~~
-
-We'll also `set -u` so we can make sure lore is compatible with that operating mode.
+We'll also `set -u` so we can make sure lore explicitly defines how it will handle missing values.
 
 ~~~sh
     $ set -u
@@ -155,52 +146,52 @@ Turning lore off removes the `lore prompt`:
     HISTFILE= history -a
     HISTFILE= history -c
     lore: loading history from .lore
-    HISTFILE=./.lore history -r
-    HISTFILE=./.lore history -a
+    HISTFILE=/TEST/.lore history -r
+    HISTFILE=/TEST/.lore history -a
 
 # Subsequent run: last directory is PWD, so just save most recent command(s)
     $ lore prompt
-    HISTFILE=./.lore history -a
+    HISTFILE=/TEST/.lore history -a
 
 # Subdirectory: no change in .lore path, so just append again:
     $ LORE_GLOBAL=$PWD/.lore
     $ mkdir x
     $ cd x
     $ lore prompt
-    HISTFILE=./.lore history -a
+    HISTFILE=/TEST/.lore history -a
 
 # Subdirectory w/change in .lore path
     $ mkdir y; touch .lore
     $ cd y
     $ lore prompt  # cd will be saved because it's the global dir
-    HISTFILE=./.lore history -a
-    HISTFILE=./.lore history -c
+    HISTFILE=/TEST/.lore history -a
+    HISTFILE=/TEST/.lore history -c
     lore: loading history from ~/x/.lore
-    HISTFILE=./x/.lore history -r
-    HISTFILE=./x/.lore history -a
+    HISTFILE=/TEST/x/.lore history -r
+    HISTFILE=/TEST/x/.lore history -a
 
 # Subdir change again, but locked this time
     $ cd ../..
     $ lore lock
     $ lore prompt
-    HISTFILE=./x/.lore history -a
+    HISTFILE=/TEST/x/.lore history -a
 
 # Now unlock
     $ lore unlock
     $ lore prompt
-    HISTFILE=./x/.lore history -c
+    HISTFILE=/TEST/x/.lore history -c
     lore: loading history from .lore
-    HISTFILE=./.lore history -r
-    HISTFILE=./.lore history -a
+    HISTFILE=/TEST/.lore history -r
+    HISTFILE=/TEST/.lore history -a
 
 # And change dirs, but without a global match
     $ unset LORE_GLOBAL
     $ cd x/y
     $ lore prompt
-    HISTFILE=./.lore history -c
+    HISTFILE=/TEST/.lore history -c
     lore: loading history from ~/x/.lore
-    HISTFILE=./x/.lore history -r
-    HISTFILE=./x/.lore history -a
+    HISTFILE=/TEST/x/.lore history -r
+    HISTFILE=/TEST/x/.lore history -a
 ~~~
 
 #### lore use
@@ -209,10 +200,10 @@ Turning lore off removes the `lore prompt`:
 
 ~~~sh
     $ lore use .
-    HISTFILE=./x/.lore history -a
-    HISTFILE=./x/.lore history -c
+    HISTFILE=/TEST/x/.lore history -a
+    HISTFILE=/TEST/x/.lore history -c
     lore: loading history from .lore
-    HISTFILE=./x/y/.lore history -r
+    HISTFILE=/TEST/x/y/.lore history -r
 
     $ lore status
     lore is off, in 'locked' mode; HISTFILE=.lore
@@ -226,10 +217,10 @@ Turning lore off removes the `lore prompt`:
 
 ~~~sh
     $ lore global
-    HISTFILE=./x/y/.lore history -a
-    HISTFILE=./x/y/.lore history -c
+    HISTFILE=/TEST/x/y/.lore history -a
+    HISTFILE=/TEST/x/y/.lore history -c
     lore: loading history from ~/.bash_history
-    HISTFILE=./.bash_history history -r
+    HISTFILE=/TEST/.bash_history history -r
 
     $ lore status
     lore is off, in 'locked' mode; HISTFILE=~/.bash_history
@@ -241,10 +232,10 @@ Turning lore off removes the `lore prompt`:
 
 ~~~sh
     $ lore local
-    HISTFILE=./.bash_history history -a
-    HISTFILE=./.bash_history history -c
+    HISTFILE=/TEST/.bash_history history -a
+    HISTFILE=/TEST/.bash_history history -c
     lore: loading history from ~/x/.lore
-    HISTFILE=./x/.lore history -r
+    HISTFILE=/TEST/x/.lore history -r
 
     $ lore status
     lore is off, in 'auto' mode; HISTFILE=~/x/.lore
@@ -257,8 +248,6 @@ Turning lore off removes the `lore prompt`:
     $ rm x/.lore
     $ rmdir x/y x
 ~~~
-
-
 
 ## Internal Tests
 
@@ -325,7 +314,7 @@ If tmux is in use and enabled, a dynamic global history filename is generated un
 # Mock tmux environment
     $ TMUX_PANE=%36
     $ tmux_out=w6p1
-    $ tmux() { printf -v REPLY " %q" "tmux" "$@"; echo "${REPLY# }" >&2; echo "$tmux_out"; }
+    $ tmux() { dumpargs "tmux" "$@"; echo "$tmux_out"; }
 
 # Default to HOME/.lore-tmux/w#lp#{pane_index}
     $ HOME=./lore-demo
