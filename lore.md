@@ -127,6 +127,8 @@ lore::select() {
 `lore::find-global` returns (in `REPLY`) the global history file.  It's either `$LORE_GLOBAL` or `$HOME/.bash_history`, unless tmux is in use (i.e. `$TMUX_PANE` is set and `$LORE_DISABLE_TMUX` isn't).  If tmux is in use and enabled, a dynamic global history filename is generated under `$LORE_TMUX_DIR` using `$LORE_TMUX_FILE` as a pattern.  `$LORE_TMUX_DIR` defaults to `$XDG_CONFIG_HOME/lore-tmux` or `$HOME/.lore-tmux`, and `$LORE_TMUX_FILE` defaults to `w#lp#{pane_index}`, which will create files like `w3p0` (for window 3, pane 0).
 
 ```shell
+declare -g __lore_tmux_cache=("" "" "")
+
 lore::find-global() {
 	REPLY=${LORE_GLOBAL:-$HOME/.bash_history};
 	[[ ${TMUX_PANE-} && ! ${LORE_DISABLE_TMUX-} ]] || return 0
@@ -136,7 +138,13 @@ lore::find-global() {
 		[[ ! ${XDG_CONFIG_HOME-} ]] || LORE_TMUX_DIR=$XDG_CONFIG_HOME/lore-tmux
 	}
 	[[ -d "$LORE_TMUX_DIR" ]] || mkdir -p "$LORE_TMUX_DIR"
-	REPLY="${LORE_TMUX_DIR}/$(tmux display-message -pt "$TMUX_PANE" "$LORE_TMUX_FILE")"
+	set -- "${__lore_tmux_cache[@]}" . . .
+	if [[ $TMUX_PANE != "$1" || $LORE_TMUX_FILE != "$2" ]]; then
+		set -- "$TMUX_PANE" "$LORE_TMUX_FILE" \
+			"$(tmux display-message -pt "$TMUX_PANE" "$LORE_TMUX_FILE")"
+		__lore_tmux_cache=("$@")
+	fi
+	REPLY="${LORE_TMUX_DIR}/$3"
 }
 ```
 
@@ -149,7 +157,7 @@ lore::find-local() {
 	lore::abspath "${1-$PWD}"; set -- "$REPLY"
 	while true; do
 		# Search up to find nearest local history file
-		lore::to-file "$1"; [[ ! -f "$REPLY" ]] || return 0;
+		REPLY=${1%/}/${LORE_FILE-.lore}; [[ ! -f "$REPLY" ]] || return 0;
 		# Any parent directories left?  If not, go global
 		if ! [[ $1 =~ /+[^/]+/*$ ]]; then lore::find-global; return; fi
 		# Strip one directory name and continue

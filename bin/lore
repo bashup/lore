@@ -63,6 +63,8 @@ lore::select() {
 		history -c; declare -g HISTFILE=$REPLY; history -r
 	fi
 }
+declare -g __lore_tmux_cache=("" "" "")
+
 lore::find-global() {
 	REPLY=${LORE_GLOBAL:-$HOME/.bash_history};
 	[[ ${TMUX_PANE-} && ! ${LORE_DISABLE_TMUX-} ]] || return 0
@@ -72,13 +74,19 @@ lore::find-global() {
 		[[ ! ${XDG_CONFIG_HOME-} ]] || LORE_TMUX_DIR=$XDG_CONFIG_HOME/lore-tmux
 	}
 	[[ -d "$LORE_TMUX_DIR" ]] || mkdir -p "$LORE_TMUX_DIR"
-	REPLY="${LORE_TMUX_DIR}/$(tmux display-message -pt "$TMUX_PANE" "$LORE_TMUX_FILE")"
+	set -- "${__lore_tmux_cache[@]}" . . .
+	if [[ $TMUX_PANE != "$1" || $LORE_TMUX_FILE != "$2" ]]; then
+		set -- "$TMUX_PANE" "$LORE_TMUX_FILE" \
+			"$(tmux display-message -pt "$TMUX_PANE" "$LORE_TMUX_FILE")"
+		__lore_tmux_cache=("$@")
+	fi
+	REPLY="${LORE_TMUX_DIR}/$3"
 }
 lore::find-local() {
 	lore::abspath "${1-$PWD}"; set -- "$REPLY"
 	while true; do
 		# Search up to find nearest local history file
-		lore::to-file "$1"; [[ ! -f "$REPLY" ]] || return 0;
+		REPLY=${1%/}/${LORE_FILE-.lore}; [[ ! -f "$REPLY" ]] || return 0;
 		# Any parent directories left?  If not, go global
 		if ! [[ $1 =~ /+[^/]+/*$ ]]; then lore::find-global; return; fi
 		# Strip one directory name and continue

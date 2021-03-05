@@ -225,13 +225,11 @@ If tmux is in use and enabled, a dynamic global history filename is generated un
 # Use XDG_CONFIG_HOME if available
     $ XDG_CONFIG_HOME=./lore-demo/config
     $ show-path lore::find-global
-    tmux display-message -pt %36 w#Ip#\{pane_index\}
     ./lore-demo/config/lore-tmux/w6p1
 
 # Use LORE_TMUX_DIR if available
     $ LORE_TMUX_DIR=./lore-tmux-files
     $ show-path lore::find-global
-    tmux display-message -pt %36 w#Ip#\{pane_index\}
     ./lore-tmux-files/w6p1
 
 # Use LORE_TMUX_FILE pattern if available
