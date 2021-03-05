@@ -6,6 +6,7 @@ For testing purposes, we will replace the history built-in with a function so we
     $ history() {
     >     local HISTFILE=${HISTFILE-}
     >     dumpargs "HISTFILE=${HISTFILE/#$TEST_ROOT//TEST}" "history" "$@"
+    >     case $1 in -w) set -- "${2-$HISTFILE}"; ${1:+touch "$1"};; esac
     > }
 
     $ history -a
@@ -247,6 +248,108 @@ Turning lore off removes the `lore prompt`:
     $ cd ../..
     $ rm x/.lore
     $ rmdir x/y x
+    $ unset HISTFILE
+~~~
+
+### History File Management
+
+#### lore reload
+
+`lore reload` forces a reload of the current history file, after saving any currently-unwritten history to it.  If there is no current history file, a local or global history file is selected automatically.  (Note: if a `HISTFILE` is already selected, this command does not select a different one, so if you're trying to get lore to recognize a newly-created local history file,  you should probably use `lore local` instead.)
+
+~~~sh
+# Auto-detect history file if no HISTFILE
+
+    $ lore reload
+    HISTFILE= history -a
+    HISTFILE= history -c
+    lore: loading history from .lore
+    HISTFILE=/TEST/.lore history -r
+
+# Reload of existing file
+
+    $ lore reload
+    HISTFILE=/TEST/.lore history -a
+    HISTFILE= history -c
+    lore: loading history from .lore
+    HISTFILE=/TEST/.lore history -r
+
+~~~
+
+#### lore save
+
+`lore save` *[dir-or-file [`-f`]]* saves a copy of the current history to *dir-or-file*.  It doesn't overwrite an existing file unless `-f` is supplied.  If no arguments are given, it just writes any unwritten history to the current history file (if any).  (i.e. a manual version of what `lore prompt` does when lore is `on`.)
+
+(This command also resets the working directory cache, so that if lore is `on` and in `auto` mode and the file should be the new local history file, it will switch to it as of the next prompt.)
+
+~~~sh
+# No arg, just saves unwritten history to current file
+    $ lore save
+    HISTFILE=/TEST/.lore history -a
+
+# New file/dir, saves unwritten to old file, all history to new file
+    $ mkdir x
+    $ cd x
+    $ lore prompt
+    HISTFILE=/TEST/.lore history -a
+
+    $ lore save .
+    HISTFILE=/TEST/.lore history -a
+    HISTFILE=/TEST/.lore history -w ./.lore
+
+# New file gets selected as of prompt
+    $ lore prompt
+    HISTFILE=/TEST/.lore history -a
+    HISTFILE=/TEST/.lore history -c
+    lore: loading history from .lore
+    HISTFILE=/TEST/x/.lore history -r
+    HISTFILE=/TEST/x/.lore history -a
+
+# Save to same file warns of overwrite
+    $ lore save .
+    HISTFILE=/TEST/x/.lore history -a
+    lore: ./.lore already exists; use 'lore save . -f' to overwrite
+    [73]
+
+# Unless forced
+    $ lore save . -f
+    HISTFILE=/TEST/x/.lore history -a
+    HISTFILE=/TEST/x/.lore history -w ./.lore
+
+~~~
+
+#### lore edit
+
+`lore edit` opens the current history file in `$EDITOR`, creating it first if necessary, and saving any unwritten history to it.  If `HISTFILE` is empty, a local or global history file is selected first.  After `$EDITOR` exits, a `lore reload` is performed.
+
+~~~sh
+# No editor set -- treats edit as no-op and just reloads
+    $ lore edit
+    HISTFILE=/TEST/x/.lore history -a
+    No EDITOR set; file '/*/x/.lore' unchanged (glob)
+    HISTFILE=/TEST/x/.lore history -a
+    HISTFILE= history -c
+    lore: loading history from .lore
+    HISTFILE=/TEST/x/.lore history -r
+
+# Runs the EDITOR if set
+    $ editor() { dumpargs editor "$@"; }
+    $ EDITOR=editor lore edit
+    HISTFILE=/TEST/x/.lore history -a
+    editor /*/x/.lore (glob)
+    HISTFILE=/TEST/x/.lore history -a
+    HISTFILE= history -c
+    lore: loading history from .lore
+    HISTFILE=/TEST/x/.lore history -r
+
+~~~
+
+#### Cleanup
+
+~~~sh
+    $ cd ..
+    $ rm x/.lore
+    $ rmdir x
 ~~~
 
 ## Internal Tests
