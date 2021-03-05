@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+dk use: bash-kit          # enable `with-bash` command to use different bash versions
+dk use: cram              # run tests using the "cram" functional test tool
+dk use: shell-console     # make the "console" command enter a subshell
+dk use: modd-watch        # watch multiple patterns and run different commands on them
+dk use: shellcheck        # support running shellcheck (via docker if not installed)
+
+before build dk test
+on     build mdsh --out bin/lore --compile "$LOCO_ROOT/lore.md"
+
+watch+ "*.md" "specs/*" "!**/*.md.err" "!**/.~*.md" -- dk test
