@@ -1,16 +1,24 @@
 ## Setup and Mocks
 
-For testing purposes, we will replace the history built-in with a function so we can see what history commands lore invokes:
+For testing purposes, we will replace the history built-in with a function so we can see what history commands lore invokes, with what values of `HISTFILE`:
 
 ~~~sh
+# Track the value of HISTFILE so we can log changes
+    $ __last_history=xxx
+
     $ history() {
     >     local HISTFILE=${HISTFILE-}
-    >     dumpargs "HISTFILE=${HISTFILE/#$TEST_ROOT//TEST}" "history" "$@"
-    >     case $1 in -w) set -- "${2-$HISTFILE}"; ${1:+touch "$1"};; esac
+    >     [[ $__last_history == "$HISTFILE" ]] || dumpargs "HISTFILE=${HISTFILE/#$TEST_ROOT//TEST}"
+    >     __last_history=$HISTFILE
+    >     dumpargs "history" "$@"
+    >     # -a and -w should create the file if it doesn't exist:
+    >     case $1 in -a|-w) set -- "${2-$HISTFILE}"; ${1:+touch "$1"};; esac
     > }
 
+# It should work like this:
     $ history -a
-    HISTFILE= history -a
+    HISTFILE=
+    history -a
 ~~~
 
 We'll also `set -u` so we can make sure lore explicitly defines how it will handle missing values.
@@ -144,55 +152,59 @@ Turning lore off removes the `lore prompt`:
 # Initial run: no "last directory", so load from .lore
     $ touch .lore
     $ lore prompt   # will save first, since no last dir
-    HISTFILE= history -a
-    HISTFILE= history -c
+    history -a
+    history -c
     lore: loading history from .lore
-    HISTFILE=/TEST/.lore history -r
-    HISTFILE=/TEST/.lore history -a
+    HISTFILE=/TEST/.lore
+    history -r
+    history -a
 
 # Subsequent run: last directory is PWD, so just save most recent command(s)
     $ lore prompt
-    HISTFILE=/TEST/.lore history -a
+    history -a
 
 # Subdirectory: no change in .lore path, so just append again:
     $ LORE_GLOBAL=$PWD/.lore
     $ mkdir x
     $ cd x
     $ lore prompt
-    HISTFILE=/TEST/.lore history -a
+    history -a
 
 # Subdirectory w/change in .lore path
     $ mkdir y; touch .lore
     $ cd y
     $ lore prompt  # cd will be saved because it's the global dir
-    HISTFILE=/TEST/.lore history -a
-    HISTFILE=/TEST/.lore history -c
+    history -a
+    history -c
     lore: loading history from ~/x/.lore
-    HISTFILE=/TEST/x/.lore history -r
-    HISTFILE=/TEST/x/.lore history -a
+    HISTFILE=/TEST/x/.lore
+    history -r
+    history -a
 
 # Subdir change again, but locked this time
     $ cd ../..
     $ lore lock
     $ lore prompt
-    HISTFILE=/TEST/x/.lore history -a
+    history -a
 
 # Now unlock
     $ lore unlock
     $ lore prompt
-    HISTFILE=/TEST/x/.lore history -c
+    history -c
     lore: loading history from .lore
-    HISTFILE=/TEST/.lore history -r
-    HISTFILE=/TEST/.lore history -a
+    HISTFILE=/TEST/.lore
+    history -r
+    history -a
 
 # And change dirs, but without a global match
     $ unset LORE_GLOBAL
     $ cd x/y
     $ lore prompt
-    HISTFILE=/TEST/.lore history -c
+    history -c
     lore: loading history from ~/x/.lore
-    HISTFILE=/TEST/x/.lore history -r
-    HISTFILE=/TEST/x/.lore history -a
+    HISTFILE=/TEST/x/.lore
+    history -r
+    history -a
 ~~~
 
 #### lore use
@@ -201,10 +213,11 @@ Turning lore off removes the `lore prompt`:
 
 ~~~sh
     $ lore use .
-    HISTFILE=/TEST/x/.lore history -a
-    HISTFILE=/TEST/x/.lore history -c
+    history -a
+    history -c
     lore: loading history from .lore
-    HISTFILE=/TEST/x/y/.lore history -r
+    HISTFILE=/TEST/x/y/.lore
+    history -r
 
     $ lore status
     lore is off, in 'locked' mode; HISTFILE=.lore
@@ -218,10 +231,11 @@ Turning lore off removes the `lore prompt`:
 
 ~~~sh
     $ lore global
-    HISTFILE=/TEST/x/y/.lore history -a
-    HISTFILE=/TEST/x/y/.lore history -c
+    history -a
+    history -c
     lore: loading history from ~/.bash_history
-    HISTFILE=/TEST/.bash_history history -r
+    HISTFILE=/TEST/.bash_history
+    history -r
 
     $ lore status
     lore is off, in 'locked' mode; HISTFILE=~/.bash_history
@@ -232,11 +246,14 @@ Turning lore off removes the `lore prompt`:
 `lore local` selects (and loads) the local history file, and switches the `LORE_MODE` to `auto`.  (Any pending history writes are flushed first.)
 
 ~~~sh
+    $ rm .lore  # drop ~/x/y/.lore so we fallback to ~/x
+
     $ lore local
-    HISTFILE=/TEST/.bash_history history -a
-    HISTFILE=/TEST/.bash_history history -c
+    history -a
+    history -c
     lore: loading history from ~/x/.lore
-    HISTFILE=/TEST/x/.lore history -r
+    HISTFILE=/TEST/x/.lore
+    history -r
 
     $ lore status
     lore is off, in 'auto' mode; HISTFILE=~/x/.lore
@@ -261,18 +278,22 @@ Turning lore off removes the `lore prompt`:
 # Auto-detect history file if no HISTFILE
 
     $ lore reload
-    HISTFILE= history -a
-    HISTFILE= history -c
+    HISTFILE=
+    history -a
+    history -c
     lore: loading history from .lore
-    HISTFILE=/TEST/.lore history -r
+    HISTFILE=/TEST/.lore
+    history -r
 
 # Reload of existing file
 
     $ lore reload
-    HISTFILE=/TEST/.lore history -a
-    HISTFILE= history -c
+    history -a
+    HISTFILE=
+    history -c
     lore: loading history from .lore
-    HISTFILE=/TEST/.lore history -r
+    HISTFILE=/TEST/.lore
+    history -r
 
 ~~~
 
@@ -285,36 +306,37 @@ Turning lore off removes the `lore prompt`:
 ~~~sh
 # No arg, just saves unwritten history to current file
     $ lore save
-    HISTFILE=/TEST/.lore history -a
+    history -a
 
 # New file/dir, saves unwritten to old file, all history to new file
     $ mkdir x
     $ cd x
     $ lore prompt
-    HISTFILE=/TEST/.lore history -a
+    history -a
 
     $ lore save .
-    HISTFILE=/TEST/.lore history -a
-    HISTFILE=/TEST/.lore history -w ./.lore
+    history -a
+    history -w ./.lore
 
 # New file gets selected as of prompt
     $ lore prompt
-    HISTFILE=/TEST/.lore history -a
-    HISTFILE=/TEST/.lore history -c
+    history -a
+    history -c
     lore: loading history from .lore
-    HISTFILE=/TEST/x/.lore history -r
-    HISTFILE=/TEST/x/.lore history -a
+    HISTFILE=/TEST/x/.lore
+    history -r
+    history -a
 
 # Save to same file warns of overwrite
     $ lore save .
-    HISTFILE=/TEST/x/.lore history -a
+    history -a
     lore: ./.lore already exists; use 'lore save . -f' to overwrite
     [73]
 
 # Unless forced
     $ lore save . -f
-    HISTFILE=/TEST/x/.lore history -a
-    HISTFILE=/TEST/x/.lore history -w ./.lore
+    history -a
+    history -w ./.lore
 
 ~~~
 
@@ -325,22 +347,26 @@ Turning lore off removes the `lore prompt`:
 ~~~sh
 # No editor set -- treats edit as no-op and just reloads
     $ lore edit
-    HISTFILE=/TEST/x/.lore history -a
+    history -a
     No EDITOR set; file '/*/x/.lore' unchanged (glob)
-    HISTFILE=/TEST/x/.lore history -a
-    HISTFILE= history -c
+    history -a
+    HISTFILE=
+    history -c
     lore: loading history from .lore
-    HISTFILE=/TEST/x/.lore history -r
+    HISTFILE=/TEST/x/.lore
+    history -r
 
 # Runs the EDITOR if set
     $ editor() { dumpargs editor "$@"; }
     $ EDITOR=editor lore edit
-    HISTFILE=/TEST/x/.lore history -a
+    history -a
     editor /*/x/.lore (glob)
-    HISTFILE=/TEST/x/.lore history -a
-    HISTFILE= history -c
+    history -a
+    HISTFILE=
+    history -c
     lore: loading history from .lore
-    HISTFILE=/TEST/x/.lore history -r
+    HISTFILE=/TEST/x/.lore
+    history -r
 
 ~~~
 
