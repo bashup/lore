@@ -19,9 +19,9 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-export LORE_SOURCE="${LORE_SOURCE-$BASH_SOURCE}"
+declare -gx LORE_SOURCE="${LORE_SOURCE:-$BASH_SOURCE}"
 lore() {
-	local REPLY; declare -F lore::loaded &>/dev/null || source "$LORE_SOURCE" --
+	local REPLY; declare -F lore::on-load &>/dev/null || source "$LORE_SOURCE" --
 	(($#)) || set -- help;
 	! declare -F lore."$1" &>/dev/null || { lore."$@"; return; }
 	case $1 in
@@ -158,9 +158,12 @@ lore::abspath() {
 	REPLY=$1
 }
 lore::to-file() { REPLY=$1; [[ ! -d $REPLY ]] || REPLY=${REPLY%/}/${LORE_FILE-.lore}; }
-lore::loaded() { :; }
-[[ $BASH_SOURCE != "$0" ]] || {
-	printf "lore must be sourced into your shell before use; try 'source %q' first\\n" "$0" >&2
-	exit 64 # EX_USAGE
+lore::on-load() {
+	if [[ ${BASH_SOURCE[1]} == "$0" ]]; then
+		printf "lore must be sourced into your shell before use; try 'source %q' first\\n" "$0" >&2
+		exit 64 # EX_USAGE
+	fi
+	if (($#)); then lore "$@"; fi
 }
-((!$#)) || lore "$@"
+
+lore::on-load "$@"

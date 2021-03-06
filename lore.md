@@ -12,9 +12,9 @@ The `lore` command is an exported function, so it can be shared by subshells.  T
 Subcommands are looked for as `lore.X` where `X` is the name of the command;  if no subcommand is given (or it's `-h` or `--help`), the `help` command is selected.  The `--` subcommand is used internally to optionally chain subcommands.
 
 ```shell
-export LORE_SOURCE="${LORE_SOURCE-$BASH_SOURCE}"
+declare -gx LORE_SOURCE="${LORE_SOURCE:-$BASH_SOURCE}"
 lore() {
-	local REPLY; declare -F lore::loaded &>/dev/null || source "$LORE_SOURCE" --
+	local REPLY; declare -F lore::on-load &>/dev/null || source "$LORE_SOURCE" --
 	(($#)) || set -- help;
 	! declare -F lore."$1" &>/dev/null || { lore."$@"; return; }
 	case $1 in
@@ -286,24 +286,16 @@ lore::to-file() { REPLY=$1; [[ ! -d $REPLY ]] || REPLY=${REPLY%/}/${LORE_FILE-.l
 
 ### Bootstrapping
 
-Now that all the commands and other functions have been defined, we can define another function to indicate that lore is fully loaded:
+Lore is loaded by sourcing; it's not directly executable, as it needs to be able to manipulate shell variables.  It does, however, support command line arguments when sourced.
 
 ```shell
-lore::loaded() { :; }
-```
-
-Lore is loaded by sourcing; it's not directly executable, as it needs to be able to manipulate shell variables.
-
-```shell
-[[ $BASH_SOURCE != "$0" ]] || {
-	printf "lore must be sourced into your shell before use; try 'source %q' first\\n" "$0" >&2
-	exit 64 # EX_USAGE
+lore::on-load() {
+	if [[ ${BASH_SOURCE[1]} == "$0" ]]; then
+		printf "lore must be sourced into your shell before use; try 'source %q' first\\n" "$0" >&2
+		exit 64 # EX_USAGE
+	fi
+	if (($#)); then lore "$@"; fi
 }
+
+lore::on-load "$@"
 ```
-
-It does, however, support command line arguments when sourced:
-
-```shell
-((!$#)) || lore "$@"
-```
-
