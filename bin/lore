@@ -75,7 +75,7 @@ lore.prompt() {
 			set -- "$REPLY"	# Save the new history file's name
 			if lore::find-global; [[ $REPLY == "${HISTFILE-}" ]]; then
 				history -a   # Only save directory-changing commands to global history
-			fi			
+			fi
 			lore::select "$1"	# Load the new history file
 		fi
 	fi

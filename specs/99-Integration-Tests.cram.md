@@ -25,7 +25,7 @@ We configure bash history to ignore cram's separator lines ( `echo salt lineno $
 
 # Enable history and run the first prompt
     $ HISTFILE=$HOME/.bash_history
-    $ set -o history
+    $ set -o history  # implicit load of history
     $ lore prompt
 
 # History is what we got from .bash_history
