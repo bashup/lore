@@ -74,6 +74,10 @@ lore.global() { lore::find-global; lore use "$REPLY" "$@"; }
 
 ```shell
 lore.use() { history -a; lore::select "${1-$PWD}"; lore lock "${@:2}"; }
+
+lore::complete.use() {
+	if (($#>1)); then lore::complete "${@:2}"; else mapfile -t COMPREPLY < <(compgen -fd "$1"); fi
+}
 ```
 
 ### Live History Saving and File-Swapping
@@ -85,7 +89,7 @@ While `lore` commands can be manually used to switch between history files, and 
 `lore on` adds `lore prompt` to `$PROMPT_COMMAND`, so that automatic saving and switching can occur.
 
 ```shell
-lore.on() {	lore off; declare -gx PROMPT_COMMAND="{ lore prompt;};${PROMPT_COMMAND-}"; }
+lore.on() {	lore off; declare -gx PROMPT_COMMAND="{ lore prompt;};${PROMPT_COMMAND-}"; lore -- "$@"; }
 ```
 
 #### lore off
@@ -95,6 +99,7 @@ lore.on() {	lore off; declare -gx PROMPT_COMMAND="{ lore prompt;};${PROMPT_COMMA
 ```shell
 lore.off() {
 	! lore::enabled || declare -gx PROMPT_COMMAND=${PROMPT_COMMAND//\{ lore prompt;\};/}
+	lore -- "$@"
 }
 ```
 
@@ -136,14 +141,16 @@ lore.prompt() {
 		[[ $__lore_pwd ]] || history -a
 		declare -g __lore_pwd=$PWD
 		if lore::find-local; [[ $REPLY != "${HISTFILE-}" ]]; then
-			set -- "$REPLY"	# Save the new history file's name
+			set -- "$REPLY"	"$@" # Save the new history file's name
 			if lore::find-global; [[ $REPLY == "${HISTFILE-}" ]]; then
 				history -a   # Only save directory-changing commands to global history
 			fi
 			lore::select "$1"	# Load the new history file
+			shift
 		fi
 	fi
 	history -a   # save last command(s)
+	lore -- "$@"
 }
 ```
 
@@ -170,6 +177,9 @@ lore.save() {
 		fi
 	fi
 }
+lore::complete.save() {
+	if (($#==2)); then COMPREPLY=(-f); else mapfile -t COMPREPLY < <(compgen -fd "$1"); fi
+}
 ```
 
 #### lore edit
@@ -183,6 +193,7 @@ lore.edit() {
 	history -a  # save any unwritten history
 	"${LORE_EDITOR:-${EDITOR:-lore::no-editor}}" "$REPLY"
 	lore reload
+	lore -- "$@"
 }
 lore::no-editor() { echo "No LORE_EDITOR or EDITOR set; file '$1' unchanged" >&2; }
 lore::current-history() { REPLY=${HISTFILE-}; [[ $REPLY ]] || lore::find-local; }
@@ -200,6 +211,7 @@ lore.reload() {
 	lore::current-history
 	declare -g HISTFILE=
 	lore::select "$REPLY"
+	lore -- "$@"
 }
 ```
 
@@ -286,6 +298,23 @@ lore::abspath() {
 
 ```shell
 lore::to-file() { REPLY=$1; [[ ! -d $REPLY ]] || REPLY=${REPLY%/}/${LORE_FILE-.lore}; }
+```
+
+### Command Completion
+
+```shell
+lore::complete() {
+	while (($#>1)); do
+		if declare -F lore::complete."$1" &>/dev/null; then
+			lore::complete."$@"; return
+		fi
+		shift
+	done
+	mapfile -t COMPREPLY < <(compgen -A function lore."${1-}")
+	COMPREPLY=("${COMPREPLY[@]#lore.}")
+}
+lore::_complete() { COMPREPLY=(); lore::complete "${COMP_WORDS[@]:0:COMP_CWORD+1}"; }
+complete -F lore::_complete lore
 ```
 
 ### Bootstrapping

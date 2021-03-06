@@ -24,6 +24,8 @@ You can do this from the command prompt if you're just trying it out, or you can
 
 Either way, this will define the `lore` function and run `lore on` to activate history auto-saving and auto-switching.  (If you just want to define the `lore` function without activating it, you can `source lore off` instead.)
 
+bash tab completion is supported for `lore` subcommands and their arguments.
+
 ### Usage Overview
 
 Once `lore` is activated, it will check at every command prompt to see if the current directory has changed, and if so, whether it needs to load a different local lore file or global history file.  It also saves any as-yet unwritten commands to the current lore or history file.
@@ -153,4 +155,5 @@ lore.my-command() {
 lore::on-load "$@"
 ~~~
 
-You can then source this file as a replacement for `source lore` (e.g. `source my-lore.sh on` or `sourc my-lore.sh off`).
+You can then source this file as a replacement for `source lore` (e.g. `source my-lore.sh on` or `source my-lore.sh off`).
+
