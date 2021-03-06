@@ -158,7 +158,7 @@ lore.prompt() {
 
 #### lore save
 
-`lore save` *[dir-or-file [`-f`]]* saves a copy of the current history to *dir-or-file*.  It doesn't overwrite an existing file unless `-f` is supplied.  If no arguments are given, it just writes any unwritten history to the current history file (if any).  (i.e. a manual version of what `lore prompt` does when lore is `on`.)
+`lore save` *[dir-or-file] [`-f`]* saves a copy of the current history to *dir-or-file* (or the current history file, if only `-f` is provided).  It doesn't overwrite an existing file unless `-f` is supplied.  If no arguments are given, it just writes any unwritten history to the current history file (if any).  (i.e. a manual version of what `lore prompt` does when lore is `on`.)
 
 (This command also resets the working directory cache, so that if lore is `on` and in `auto` mode and the file should be the new local history file, it will switch to it as of the next prompt.)
 
@@ -166,14 +166,14 @@ lore.prompt() {
 lore.save() {
 	history -a  # save current history to current file
 	if (($#)); then
-		case $1 in -f) set -- "${2-.}" "$1" ;; esac
+		case $1 in -f) set -- "${2-$HISTFILE}" "$1" ;; esac
 		lore::to-file "$1"
 		if [[ -f "$REPLY" && ${2-} != "-f" ]]; then
 			echo "lore: $REPLY already exists; use 'lore save $1 -f' to overwrite" >&2
 			return 73  # EX_CANTCREAT
 		else
 			history -w "$REPLY"
-			declare -g __lore_pwd=
+			[[ $HISTFILE == "$REPLY" ]] || declare -g __lore_pwd=
 		fi
 	fi
 }

@@ -91,14 +91,14 @@ lore.prompt() {
 lore.save() {
 	history -a  # save current history to current file
 	if (($#)); then
-		case $1 in -f) set -- "${2-.}" "$1" ;; esac
+		case $1 in -f) set -- "${2-$HISTFILE}" "$1" ;; esac
 		lore::to-file "$1"
 		if [[ -f "$REPLY" && ${2-} != "-f" ]]; then
 			echo "lore: $REPLY already exists; use 'lore save $1 -f' to overwrite" >&2
 			return 73  # EX_CANTCREAT
 		else
 			history -w "$REPLY"
-			declare -g __lore_pwd=
+			[[ $HISTFILE == "$REPLY" ]] || declare -g __lore_pwd=
 		fi
 	fi
 }

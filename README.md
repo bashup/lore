@@ -76,6 +76,12 @@ Lore reads or writes these variables:
 
 The behavior of Lore is also affected by most bash history settings, including `HISTSIZE`, `HISTFILESIZE`, `HISTIGNORE`, and `HISTCONTROL`, as well as the various `shopt` settings.  Lore doesn't read or write any of these settings, but they influence what gets put into the history, and thus what Lore will save to history files.  (And how those files will be truncated as they grow larger.)
 
+#### erasedups
+
+Note that because lore writes to history file(s) using `history -a`, a `HISTCONTROL` of `erasedups` will have no effect by default, as the duplicates will be removed from the history in memory, but not on disk.  You can force a cleanup of the disk file at any time using `lore save -f`, which will replace the current history file's contents with the in-memory history.
+
+(Note, however that this will only erase duplicates of commands you've actually *used* in your current session, and if you've done things in other terminals sharing the same history file, you'll lose any commands entered in those other terminals unless you use `history -n` to load those new entries into your current session.)
+
 ## CLI Reference
 
 ### History File Selection
@@ -96,7 +102,7 @@ The behavior of Lore is also affected by most bash history settings, including `
 
 #### lore save
 
-`lore save` *[dir-or-file [`-f`]]* saves a copy of the current history to *dir-or-file*.  It doesn't overwrite an existing file unless `-f` is supplied.  If no arguments are given, it just writes any unwritten history to the current history file (if any).  (i.e. a manual version of what `lore prompt` does when lore is `on`.)
+`lore save` *[dir-or-file] [`-f`]* saves a copy of the current history to *dir-or-file* (or the current history file, if only `-f` is provided).  It doesn't overwrite an existing file unless `-f` is supplied.  If no arguments are given, it just writes any unwritten history to the current history file (if any).  (i.e. a manual version of what `lore prompt` does when lore is `on`.)
 
 (This command also resets the working directory cache, so that if lore is `on` and in `auto` mode, and the new file should be the new local history file, it will switch to it as of the next prompt.)
 

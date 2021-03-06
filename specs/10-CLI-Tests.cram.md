@@ -299,7 +299,7 @@ Turning lore off removes the `lore prompt`:
 
 #### lore save
 
-`lore save` *[dir-or-file [`-f`]]* saves a copy of the current history to *dir-or-file*.  It doesn't overwrite an existing file unless `-f` is supplied.  If no arguments are given, it just writes any unwritten history to the current history file (if any).  (i.e. a manual version of what `lore prompt` does when lore is `on`.)
+`lore save` *[dir-or-file] [`-f`]* saves a copy of the current history to *dir-or-file* (or the current history file, if only `-f` is provided).  It doesn't overwrite an existing file unless `-f` is supplied.  If no arguments are given, it just writes any unwritten history to the current history file (if any).  (i.e. a manual version of what `lore prompt` does when lore is `on`.)
 
 (This command also resets the working directory cache, so that if lore is `on` and in `auto` mode and the file should be the new local history file, it will switch to it as of the next prompt.)
 
@@ -307,6 +307,11 @@ Turning lore off removes the `lore prompt`:
 # No arg, just saves unwritten history to current file
     $ lore save
     history -a
+
+# Just -f, just saves unwritten history to current file
+    $ lore save -f
+    history -a
+    history -w /*/.lore (glob)
 
 # New file/dir, saves unwritten to old file, all history to new file
     $ mkdir x
