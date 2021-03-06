@@ -14,17 +14,17 @@ In addition to allowing per-project lore files, `lore` will fall back to the glo
 
 (If you have basher, the fast way to do that is with `basher install bashup/lore`.  Or you can just clone this repository somewhere on your system and source the binary from there.)
 
-Once `lore` is physically present on your system, you can activate it with:
+Once `lore` is physically present on your system, you can install it for use in new terminal windows by adding this line to your `~/.bash_profile`:
 
 ~~~sh
-    $ source lore on
+source lore on
 ~~~
 
-You can do this from the command prompt if you're just trying it out, or you can put it in your `.bashrc` or `.bash_profile`.
+You can also just type that on the command line if you want to try it out, or just want to use it manually.
 
-Either way, this will define the `lore` function and run `lore on` to activate history auto-saving and auto-switching.  (If you just want to define the `lore` function without activating it, you can `source lore off` instead.)
+Either way, this will define the `lore` function and run `lore on` to activate history auto-saving and auto-switching.  (If you just want to define the `lore` function without activating it, you can `source lore off` instead, or `source lore --` to load lore and its completions without changing its modes or the currently-selected history file.)
 
-bash tab completion is supported for `lore` subcommands and their arguments.
+bash tab completion is supported for `lore` subcommands and their arguments, though if lore is `off` and you enter a new subshell, the completions won't be active until you've used the `lore` function in the subshell at least once.
 
 ### Usage Overview
 

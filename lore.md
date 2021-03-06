@@ -227,7 +227,7 @@ lore::select() {
 	if [[ $REPLY != "${HISTFILE-}" ]]; then
 		# Clear current history and load the new one
 		history -c
-		declare -g HISTFILE=$REPLY; lore::format-histfile
+		declare -gx HISTFILE=$REPLY; lore::format-histfile
 		echo "lore: loading history from $REPLY" >&2
 		history -r
 	fi
