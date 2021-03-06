@@ -172,17 +172,17 @@ lore.save() {
 
 #### lore edit
 
-`lore edit` opens the current history file in `$EDITOR`, creating it first if necessary, and saving any unwritten history to it.  If `HISTFILE` is empty, a local or global history file is selected first.  After `$EDITOR` exits, a `lore reload` is performed.
+`lore edit` opens the current history file (in `$LORE_EDITOR` or `$EDITOR`), creating it first if necessary, and saving any unwritten history to it.  If `HISTFILE` is empty, a local or global history file is selected first.  After the editor exits, a `lore reload` is performed.
 
 ```shell
 lore.edit() {
 	lore::current-history
 	[[ -f "$REPLY" ]] || touch "$REPLY"
 	history -a  # save any unwritten history
-	"${EDITOR:-lore::no-editor}" "$REPLY"
+	"${LORE_EDITOR:-${EDITOR:-lore::no-editor}}" "$REPLY"
 	lore reload
 }
-lore::no-editor() { echo "No EDITOR set; file '$1' unchanged" >&2; }
+lore::no-editor() { echo "No LORE_EDITOR or EDITOR set; file '$1' unchanged" >&2; }
 lore::current-history() { REPLY=${HISTFILE-}; [[ $REPLY ]] || lore::find-local; }
 ```
 

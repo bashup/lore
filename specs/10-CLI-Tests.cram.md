@@ -342,13 +342,13 @@ Turning lore off removes the `lore prompt`:
 
 #### lore edit
 
-`lore edit` opens the current history file in `$EDITOR`, creating it first if necessary, and saving any unwritten history to it.  If `HISTFILE` is empty, a local or global history file is selected first.  After `$EDITOR` exits, a `lore reload` is performed.
+`lore edit` opens the current history file (in `$LORE_EDITOR` or `$EDITOR`), creating it first if necessary, and saving any unwritten history to it.  If `HISTFILE` is empty, a local or global history file is selected first.  After the editor exits, a `lore reload` is performed.
 
 ~~~sh
 # No editor set -- treats edit as no-op and just reloads
     $ lore edit
     history -a
-    No EDITOR set; file '/*/x/.lore' unchanged (glob)
+    No LORE_EDITOR or EDITOR set; file '/*/x/.lore' unchanged (glob)
     history -a
     HISTFILE=
     history -c
@@ -359,6 +359,18 @@ Turning lore off removes the `lore prompt`:
 # Runs the EDITOR if set
     $ editor() { dumpargs editor "$@"; }
     $ EDITOR=editor lore edit
+    history -a
+    editor /*/x/.lore (glob)
+    history -a
+    HISTFILE=
+    history -c
+    lore: loading history from .lore
+    HISTFILE=/TEST/x/.lore
+    history -r
+
+# Runs the LORE_EDITOR with precedence over EDITOR
+    $ editor() { dumpargs editor "$@"; }
+    $ EDITOR=echo LORE_EDITOR=editor lore edit
     history -a
     editor /*/x/.lore (glob)
     history -a

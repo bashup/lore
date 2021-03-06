@@ -99,10 +99,10 @@ lore.edit() {
 	lore::current-history
 	[[ -f "$REPLY" ]] || touch "$REPLY"
 	history -a  # save any unwritten history
-	"${EDITOR:-lore::no-editor}" "$REPLY"
+	"${LORE_EDITOR:-${EDITOR:-lore::no-editor}}" "$REPLY"
 	lore reload
 }
-lore::no-editor() { echo "No EDITOR set; file '$1' unchanged" >&2; }
+lore::no-editor() { echo "No LORE_EDITOR or EDITOR set; file '$1' unchanged" >&2; }
 lore::current-history() { REPLY=${HISTFILE-}; [[ $REPLY ]] || lore::find-local; }
 lore.reload() {
 	history -a  # save current history to current file
