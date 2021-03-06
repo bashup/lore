@@ -29,6 +29,8 @@ export -f lore
 
 #### lore status
 
+`lore status` displays some info about lore's current state: whether it's active in `PROMPT_COMMAND`, whether it is in `locked` or `auto` mode, and the current lore/history file in use.
+
 ```shell
 lore.status() {
 	local REPLY is_on=ON; lore::enabled || is_on=off;
@@ -188,7 +190,9 @@ lore::current-history() { REPLY=${HISTFILE-}; [[ $REPLY ]] || lore::find-local; 
 
 #### lore reload
 
-`lore reload` forces a reload of the current history file, after saving any currently-unwritten history to it.  If there is no current history file, a local or global history file is selected automatically.  (Note: if a `HISTFILE` is already selected, this command does not select a different one, so if you're trying to get lore to recognize a newly-created local history file,  you should probably use `lore local` instead.)
+`lore reload` forces a reload of the current history file, after saving any currently-unwritten history to it.  If there is no current history file, a local or global history file is selected automatically.
+
+(Note: if a history file is already selected, this command does *not* select a different one, so if you're trying to get lore to recognize a newly-created local history file,  you should probably use `lore local` instead.)
 
 ```shell
 lore.reload() {
