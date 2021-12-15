@@ -387,6 +387,38 @@ Turning lore off removes the `lore prompt`:
 
 ~~~
 
+#### lore dedupe
+
+`lore dedupe` cleans the history of older duplicates of the same commands.  That is, for every line in the history, only the most recent copy of that line is kept, with earlier copies removed.
+
+~~~sh
+    $ cat <<EOF >.lore
+    > ps -ef
+    > ls -l
+    > cat .lore
+    > ls -l
+    > echo testing
+    > echo testing
+    > whoami
+    > EOF
+
+    $ lore dedupe
+    history -a
+    history -a
+    HISTFILE=
+    history -c
+    lore: loading history from .lore
+    HISTFILE=/TEST/x/.lore
+    history -r
+
+    $ cat .lore
+    ps -ef
+    cat .lore
+    ls -l
+    echo testing
+    whoami
+~~~
+
 #### Cleanup
 
 ~~~sh

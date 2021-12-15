@@ -188,15 +188,42 @@ lore::complete.save() {
 
 ```shell
 lore.edit() {
+	lore::ensure-editable
+	"${LORE_EDITOR:-${EDITOR:-lore::no-editor}}" "$REPLY"
+	lore reload "$@"
+}
+
+lore::ensure-editable() {
+	# ensure history exists and saved and filename in REPLY
 	lore::current-history
 	[[ -f "$REPLY" ]] || touch "$REPLY"
 	history -a  # save any unwritten history
-	"${LORE_EDITOR:-${EDITOR:-lore::no-editor}}" "$REPLY"
-	lore reload
-	lore -- "$@"
 }
+
 lore::no-editor() { echo "No LORE_EDITOR or EDITOR set; file '$1' unchanged" >&2; }
 lore::current-history() { REPLY=${HISTFILE-}; [[ $REPLY ]] || lore::find-local; }
+```
+
+#### lore dedupe
+
+`lore dedupe` cleans the history of older duplicates of the same commands.  That is, for every line in the history, only the most recent copy of that line is kept, with earlier copies removed.
+
+```shell
+lore.dedupe() {
+	lore::ensure-editable
+	local -A seen; local -a lines; local -i i; local line
+	mapfile lines <"$REPLY"
+	#set -x
+	for ((i=${#lines[@]}-1; i>=0; i--)); do
+		line=${lines[$i]}
+		if [[ ${seen[$line]+x} ]]; then
+			unset lines[$i]
+		else seen[$line]=y
+		fi
+	done
+	printf %s "${lines[@]}" >|"$REPLY";
+	lore reload "$@"
+}
 ```
 
 #### lore reload

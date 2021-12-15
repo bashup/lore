@@ -110,6 +110,12 @@ Note that because lore writes to history file(s) using `history -a`, a `HISTCONT
 
 `lore edit` opens the current history file (in `$LORE_EDITOR` or `$EDITOR`), creating it first if necessary, and saving any unwritten history to it.  If `HISTFILE` is empty, a local or global history file is selected first.  After the editor exits, a `lore reload` is performed.
 
+#### lore dedupe
+
+`lore dedupe` cleans the history of older duplicates of the same commands.  That is, for every line in the history, only the most recent copy of that line is kept, with earlier copies removed.
+
+Like most lore subcommands, dedupe can be chained with other subcommands, e.g. `lore dedupe edit` to edit the history after cleaning it.
+
 #### lore reload
 
 `lore reload` forces a reload of the current history file, after saving any currently-unwritten history to it.  If there is no current history file, a local or global history file is selected automatically.
