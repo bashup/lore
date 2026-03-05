@@ -89,7 +89,7 @@ While `lore` commands can be manually used to switch between history files, and 
 `lore on` adds `lore prompt` to `$PROMPT_COMMAND`, so that automatic saving and switching can occur.
 
 ```shell
-lore.on() {	lore off; declare -gx PROMPT_COMMAND="{ lore prompt;};${PROMPT_COMMAND-}"; lore -- "$@"; }
+lore.on() {	lore off; declare -gx PROMPT_COMMAND="{ lore prompt;}${PROMPT_COMMAND:+;${PROMPT_COMMAND}}"; lore -- "$@"; }
 ```
 
 #### lore off
@@ -98,7 +98,7 @@ lore.on() {	lore off; declare -gx PROMPT_COMMAND="{ lore prompt;};${PROMPT_COMMA
 
 ```shell
 lore.off() {
-	! lore::enabled || declare -gx PROMPT_COMMAND=${PROMPT_COMMAND//\{ lore prompt;\};/}
+	! lore::enabled || { : "${PROMPT_COMMAND//\{ lore prompt;\};/}"; declare -gx PROMPT_COMMAND=${_//\{ lore prompt;\}/}; }
 	lore -- "$@"
 }
 ```

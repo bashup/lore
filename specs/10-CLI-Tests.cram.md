@@ -77,7 +77,7 @@ Turning lore on puts `lore prompt` at the start of the prompt command, without d
     lore is ON, in 'auto' mode; HISTFILE=''
 
     $ declare -p PROMPT_COMMAND
-    declare -x PROMPT_COMMAND="{ lore prompt;};"
+    declare -x PROMPT_COMMAND="{ lore prompt;}"
 
     $ PROMPT_COMMAND="echo test 1;$PROMPT_COMMAND"
     $ lore on
