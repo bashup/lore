@@ -69,25 +69,26 @@ And when run in a subshell relative to where it's sourced, it'll automatically s
 
 #### lore on
 
-Turning lore on puts `lore prompt` at the start of the prompt command, without duplication:
+Turning lore on puts `lore.prompt` at the start of the prompt command, without duplication:
 
 ~~~sh
+    $ PROMPT_COMMAND=
     $ lore on
     $ lore status
     lore is ON, in 'auto' mode; HISTFILE=''
 
     $ declare -p PROMPT_COMMAND
-    declare -x PROMPT_COMMAND="{ lore prompt;}"
+    declare -x PROMPT_COMMAND="lore.prompt"
 
     $ PROMPT_COMMAND="echo test 1;$PROMPT_COMMAND"
     $ lore on
     $ declare -p PROMPT_COMMAND
-    declare -x PROMPT_COMMAND="{ lore prompt;};echo test 1;"
+    declare -x PROMPT_COMMAND="lore.prompt;echo test 1"
 
     $ PROMPT_COMMAND="echo test 2;$PROMPT_COMMAND"
     $ lore on
     $ declare -p PROMPT_COMMAND
-    declare -x PROMPT_COMMAND="{ lore prompt;};echo test 2;echo test 1;"
+    declare -x PROMPT_COMMAND="lore.prompt;echo test 2;echo test 1"
 
     $ lore status
     lore is ON, in 'auto' mode; HISTFILE=''
@@ -95,7 +96,7 @@ Turning lore on puts `lore prompt` at the start of the prompt command, without d
 
 #### lore off
 
-Turning lore off removes the `lore prompt`:
+Turning lore off removes the `lore.prompt`:
 
 ~~~sh
     $ PROMPT_COMMAND="echo test 3;$PROMPT_COMMAND"
@@ -105,7 +106,7 @@ Turning lore off removes the `lore prompt`:
     lore is off, in 'auto' mode; HISTFILE=''
 
     $ declare -p PROMPT_COMMAND
-    declare -x PROMPT_COMMAND="echo test 3;echo test 2;echo test 1;"
+    declare -x PROMPT_COMMAND="echo test 3;echo test 2;echo test 1"
 
     $ unset PROMPT_COMMAND
 ~~~

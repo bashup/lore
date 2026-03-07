@@ -39,9 +39,9 @@ lore.status() {
 	lore -- "$@"
 }
 
-lore::enabled() { [[ ${PROMPT_COMMAND-} == *'lore prompt;'* ]]; }
+lore::enabled() { [[ ";${PROMPT_COMMAND-};" == *';lore.prompt;'* ]]; }
 
-lore::format-histfile() { #set -x
+lore::format-histfile() {
 	REPLY=${HISTFILE-}; REPLY=${REPLY/#$PWD\//}
 	[[ ! ${HOME-} ]] || REPLY=${REPLY/#$HOME\//'~'/}
 	REPLY="${REPLY:-''}"
@@ -86,19 +86,19 @@ While `lore` commands can be manually used to switch between history files, and 
 
 #### lore on
 
-`lore on` adds `lore prompt` to `$PROMPT_COMMAND`, so that automatic saving and switching can occur.
+`lore on` adds `lore.prompt` to `$PROMPT_COMMAND`, so that automatic saving and switching can occur.
 
 ```shell
-lore.on() {	lore off; declare -gx PROMPT_COMMAND="{ lore prompt;}${PROMPT_COMMAND:+;${PROMPT_COMMAND}}"; lore -- "$@"; }
+lore.on() {	lore off; declare -gx PROMPT_COMMAND="lore.prompt${PROMPT_COMMAND:+;${PROMPT_COMMAND}}"; lore -- "$@"; }
 ```
 
 #### lore off
 
-`lore off ` removes the `lore prompt` from `$PROMPT_COMMAND`, disabling auto-save and auto-switching.
+`lore off ` removes the `lore.prompt` from `$PROMPT_COMMAND`, disabling auto-save and auto-switching.
 
 ```shell
 lore.off() {
-	! lore::enabled || { : "${PROMPT_COMMAND//\{ lore prompt;\};/}"; declare -gx PROMPT_COMMAND=${_//\{ lore prompt;\}/}; }
+	! lore::enabled || { : ";${PROMPT_COMMAND};" ; : "${_//;lore.prompt;/;}" ; : "${_#;}" ; declare -gx PROMPT_COMMAND=${_%;} ; }
 	lore -- "$@"
 }
 ```
@@ -150,7 +150,7 @@ lore.prompt() {
 		fi
 	fi
 	history -a   # save last command(s)
-	lore -- "$@"
+	((!$#)) || lore -- "$@"
 }
 ```
 
@@ -213,7 +213,6 @@ lore.dedupe() {
 	lore::ensure-editable
 	local -A seen; local -a lines; local -i i; local line
 	mapfile lines <"$REPLY"
-	#set -x
 	for ((i=${#lines[@]}-1; i>=0; i--)); do
 		line=${lines[$i]}
 		if [[ ${seen[$line]+x} ]]; then

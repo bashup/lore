@@ -39,7 +39,7 @@ lore.status() {
 	lore -- "$@"
 }
 
-lore::enabled() { [[ ${PROMPT_COMMAND-} == *'lore prompt;'* ]]; }
+lore::enabled() { [[ ";${PROMPT_COMMAND-};" == *';lore.prompt;'* ]]; }
 
 lore::format-histfile() { #set -x
 	REPLY=${HISTFILE-}; REPLY=${REPLY/#$PWD\//}
@@ -53,9 +53,9 @@ lore.use() { history -a; lore::select "${1-$PWD}"; lore lock "${@:2}"; }
 lore::complete.use() {
 	if (($#>1)); then lore::complete "${@:2}"; else mapfile -t COMPREPLY < <(compgen -fd "$1"); fi
 }
-lore.on() {	lore off; declare -gx PROMPT_COMMAND="{ lore prompt;}${PROMPT_COMMAND:+;${PROMPT_COMMAND}}"; lore -- "$@"; }
+lore.on() {	lore off; declare -gx PROMPT_COMMAND="lore.prompt${PROMPT_COMMAND:+;${PROMPT_COMMAND}}"; lore -- "$@"; }
 lore.off() {
-	! lore::enabled || { : "${PROMPT_COMMAND//\{ lore prompt;\};/}"; declare -gx PROMPT_COMMAND=${_//\{ lore prompt;\}/}; }
+	! lore::enabled || { : ";${PROMPT_COMMAND};" ; : "${_//;lore.prompt;/;}" ; : "${_#;}" ; declare -gx PROMPT_COMMAND=${_%;} ; }
 	lore -- "$@"
 }
 lore.lock() { lore::set-mode locked "disabling autoselect; use 'lore unlock' to re-enable" "$@"; }
@@ -86,7 +86,7 @@ lore.prompt() {
 		fi
 	fi
 	history -a   # save last command(s)
-	lore -- "$@"
+	((!$#)) || lore -- "$@"
 }
 lore.save() {
 	history -a  # save current history to current file
